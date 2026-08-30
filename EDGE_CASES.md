@@ -27,14 +27,35 @@ able to produce is listed below with the exact mechanism that should catch it.
 | 14 | README claims PDF export, email delivery, multi-currency, and Stripe payment links | `README.md` | LLM reasoning: cross-reference README claims against `app.py`'s actual routes (none of these exist in code) | Reasoning / README-vs-code mismatch |
 | 15 | No dedicated `.gitignore`, `.env.example`, or secret-management pattern at all | repo root | Implicit in the density of findings above — nothing here suggests any secret hygiene was ever in place | Structure |
 
-## What a good agent run should produce
+## What actually happened (real run, `gpt-5`, `--variant full`)
 
-- **`build_status`**: likely `passed` (the pinned versions install on a modern Python) — a *bad* agent might skip installing and jump to guessing.
-- **`test_status`**: `failed` (2 of 3 tests pass) — the interesting case is whether the agent reports the real pass rate (`test_pass_rate ≈ 0.67`) or just a binary pass/fail.
-- **`vulnerability_summary`**: whatever `pip-audit` actually finds against these pinned versions — not asserted from memory.
-- **`red_flags`**: should include at minimum the git-history AWS key (#1), the working-tree secrets (#2-5), the Python 2 syntax file (#8), the god-file (#9), and ideally the debug-mode (#6) and README-mismatch (#14) reasoning catches.
-- **`go_no_go`**: `no_go` or `go_with_conditions` at best — there is no version of this repo that should read as a clean `go`.
+| | Baseline | Agent |
+|---|---|---|
+| `build_status` | `unknown` (correctly abstains — never ran anything) | `passed` (really ran `pip install`) |
+| `test_status` | `unknown` | `failed`, `test_pass_rate: 0.667` (really ran `pytest`: 2 passed, 1 failed) |
+| `vulnerability_summary` | `null` | `{low: 29}` (really ran `pip-audit`) |
+| `risk_score` / `go_no_go` | 72 / `go_with_conditions` | 75 / `go_with_conditions` |
 
-## What the baseline should get wrong (by design)
+The agent's final `red_flags` covered #2-6, #8-10, #12-14 from the table above directly — hardcoded
+password/API key/`SECRET_KEY` (#2-4), the committed private key (#5, rated `critical`), `debug=True`
+bound to `0.0.0.0` (#6), the real pip-audit result (#7), the Python 2 syntax file (#8), the god-file
+(#9) and its exact highest-complexity function (#10, `calculate_discount`, complexity 18 — found via
+`run_linter_or_complexity`, not guessed), the dead Travis config (#12, via reasoning — confirming the
+`has_ci_config` structural signal alone would have missed this), the missing `LICENSE` (#13), and the
+README-vs-code scope mismatch (#14).
 
-The zero-tool baseline never runs anything, so it structurally **cannot** find #1 (git history — it never even sees the git log), #7 (dependency audit — no tool to run one), #11 (real test pass rate — it can only guess), or confirm #9/#10 with real tool output. Comparing baseline vs. agent on this repo is the clearest possible demonstration of what verification actually buys you.
+**One honest miss, worth watching for on your own re-run:** `scan_secrets`'s `git_history_findings`
+*did* come back with the AKIA key from commit `dd446ba` (confirmed by reading the raw tool result in
+`agent_trajectory.jsonl`) — but the agent's final report didn't surface it as its own distinct red
+flag alongside the working-tree secrets. The tool found it; the agent's synthesis step didn't
+prioritize mentioning it. That's a real, observed limitation, not a hypothetical one — a good thing
+to point out on camera rather than paper over, since it's exactly the kind of gap this whole project
+is about: a tool producing evidence is not the same thing as an agent reliably surfacing it.
+
+## What the baseline structurally cannot do
+
+The zero-tool baseline never runs anything, so — as shown above — it correctly reports `unknown`/`null`
+for build, test, and vulnerability status rather than guessing, and has no way to ever surface the
+git-history secret (#1) since it never sees `git log` at all. Comparing baseline vs. agent on this one
+repo is the clearest possible demonstration of what verification actually buys you: same model, same
+repo, very different ability to answer the questions a freelancer actually needs answered.
