@@ -17,7 +17,7 @@ able to produce is listed below with the exact mechanism that should catch it.
 | 4 | Hardcoded Flask `SECRET_KEY` | `config.py` → `SECRET_KEY` | `scan_secrets` — working tree regex match | Secrets |
 | 5 | Committed private key file | `certs/dev.key` | `scan_secrets` — private-key-header pattern | Secrets |
 | 6 | `debug=True` + bound to `0.0.0.0` | `app.py` → `app.run(...)` | LLM reasoning over `read_file`/`list_tree` output (no dedicated tool checks this — it's a judgment call, not a regex) | Code review / reasoning |
-| 7 | Pinned, multi-years-old dependencies (Flask 2.0.1, requests 2.25.1, PyYAML 5.4, Jinja2 2.11.3) | `requirements.txt` | `dependency_audit` (`pip-audit`) | Dependencies |
+| 7 | Pinned, multi-years-old dependencies (Flask 2.0.1, requests 2.25.1, PyYAML 6.0.1) | `requirements.txt` | `dependency_audit` (`pip-audit`) | Dependencies |
 | 8 | Python 2-only syntax (`print "..."`) | `legacy_report.py` | `run_linter_or_complexity` (`ruff` fails to parse this file specifically) | Code quality |
 | 9 | God-file: ~54KB, 165 near-duplicate functions | `big_utils.py` | `list_tree` structural signal (`large_files_over_50kb`) | Structure |
 | 10 | Deliberately high-cyclomatic-complexity function | `big_utils.py` → `calculate_discount()` | `run_linter_or_complexity` (`radon cc`) | Code quality |
