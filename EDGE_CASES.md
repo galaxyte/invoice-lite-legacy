@@ -44,13 +44,15 @@ bound to `0.0.0.0` (#6), the real pip-audit result (#7), the Python 2 syntax fil
 `has_ci_config` structural signal alone would have missed this), the missing `LICENSE` (#13), and the
 README-vs-code scope mismatch (#14).
 
-**One honest miss, worth watching for on your own re-run:** `scan_secrets`'s `git_history_findings`
-*did* come back with the AKIA key from commit `dd446ba` (confirmed by reading the raw tool result in
-`agent_trajectory.jsonl`) — but the agent's final report didn't surface it as its own distinct red
-flag alongside the working-tree secrets. The tool found it; the agent's synthesis step didn't
-prioritize mentioning it. That's a real, observed limitation, not a hypothetical one — a good thing
-to point out on camera rather than paper over, since it's exactly the kind of gap this whole project
-is about: a tool producing evidence is not the same thing as an agent reliably surfacing it.
+**One honest miss on a first run, not reproduced on a second:** on the first real run, `scan_secrets`'s
+`git_history_findings` *did* come back with the AKIA key from commit `dd446ba` (confirmed by reading
+the raw tool result in `agent_trajectory.jsonl`) — but the agent's final report didn't surface it as
+its own distinct red flag alongside the working-tree secrets. On a second independent run, it *did*
+surface it, as "AWS access key ID pattern found in git history," correctly cited to the
+`scan_secrets` tool call. Same repo, same prompt, different outcome — that's real, observed
+non-determinism, not a fixed bug to "fix" and declare solved. Worth pointing out on camera rather
+than papering over: a tool producing evidence is necessary but not sufficient for an agent to
+reliably surface it every time, and a single successful run is not proof the gap is closed.
 
 ## What the baseline structurally cannot do
 
